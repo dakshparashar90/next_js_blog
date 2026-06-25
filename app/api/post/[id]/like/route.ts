@@ -4,7 +4,10 @@ import Post from '@/models/Post';
 import jwt from 'jsonwebtoken';
 import { DecodedToken } from '@/app/types';
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+){
     try {
         await connectDB();
         

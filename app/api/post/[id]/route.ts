@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/app/lib/db';
 import Post from '@/models/Post';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
     try {
         await connectDB();
         
