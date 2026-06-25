@@ -6,20 +6,19 @@ export interface IUser{
     token?:string
 }
 
-export interface IPost{
-    authorName: ReactNode;
+export interface IPost {
+    authorName: string;
     views: number;
     likes: any;
-    _id:string;
-    title:string;
-    content:string;
-    summary?:string;
-    authore:string;
-    status:'draft' | 'published';
-    createdAt:string;
-    updatedAt:string;
+    _id: string;
+    title: string;
+    content: string;
+    summary?: string;
+    authore: string;
+    status: "draft" | "published";
+    createdAt: string;
+    updatedAt: string;
 }
-
 export interface DecodedToken {
     id:string;
     iat:number;
