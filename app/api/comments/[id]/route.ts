@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/app/lib/db';
-import Comment from '@/models/Comment';
+import Comment from "@/models/Comment"
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { DecodedToken } from '@/app/types';
+import { DecodedToken } from '@/app/types/index';
 
-// Enforce target check model registration safely for population helper references
-const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
-    username: { type: String, required: true }
-}));
-
-export async function GET(req: NextRequest, context: any) {
+export async function GET(
+    req: NextRequest, 
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         await connectDB();
         
-        // Next.js 15 dynamic parameters safely extract
-        const resolvedParams = await context.params;
-        const id = resolvedParams.id; // Yeh aapki postId hai
+        // Params ko properly await karo
+        const resolvedParams = await params;
+        const id = resolvedParams.id; 
 
         if (!id) {
             return NextResponse.json({ message: 'Post ID missing' }, { status: 400 });
@@ -29,13 +27,16 @@ export async function GET(req: NextRequest, context: any) {
     }
 }
 
-// ✅ Same tarike se POST function ko bhi 'context: any' kar do:
-export async function POST(req: NextRequest, context: any) {
+// ✅ 2. POST Handler with Exact Next.js 15 Promise Constraints
+export async function POST(
+    req: NextRequest, 
+    { params }: { params: Promise<{ id: string }> } // <-- Strict Type Sync
+) {
     try {
         await connectDB();
         
-        const resolvedParams = await context.params;
-        const id = resolvedParams.id; // PostId
+        const resolvedParams = await params;
+        const id = resolvedParams.id; 
 
         const authHeader = req.headers.get('authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -65,7 +66,6 @@ export async function POST(req: NextRequest, context: any) {
         return NextResponse.json({ message: err.message }, { status: 400 });
     }
 }
-
 // import { NextRequest, NextResponse } from 'next/server';
 // import { connectDB } from '@/app/lib/db';
 // import Comment from '@/models/Comment';
