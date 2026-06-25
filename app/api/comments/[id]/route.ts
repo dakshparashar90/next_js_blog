@@ -1,75 +1,60 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/app/lib/db';
+import Comment from '@/models/Comment';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
-import { DecodedToken } from '@/app/types/index';
+import { DecodedToken } from '@/app/types';
 
-// Comment Schema registration safely
-const CommentSchema = new mongoose.models.Comment?.schema || new mongoose.Schema({
-    postId: { type: String, required: true },
-    content: { type: String, required: true },
-    author: {
-        id: { type: String, required: true },
-        username: { type: String, required: true }
-    }
-}, { timestamps: true });
+// Enforce target check model registration safely for population helper references
+const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({
+    username: { type: String, required: true }
+}));
 
-const Comment = mongoose.models.Comment || mongoose.model('Comment', CommentSchema);
-
-// ✅ GET Handler: Fully dynamic with explicit any constraint for Next.js 15
-export async function GET(req: NextRequest, { params }: any) {
+export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         await connectDB();
+        const { id } = await params;
         
-        // Next.js 15 safe parameter resolution
-        const resolvedParams = await params;
-        const id = resolvedParams?.id; 
-
-        if (!id) {
-            return NextResponse.json({ message: 'Post ID missing' }, { status: 400 });
-        }
-
-        const comments = await Comment.find({ postId: id }).sort({ createdAt: -1 });
+        // 🚨 FIX: '.populate' ka use karke author string ID ki jagah User document se 'username' uthaya
+        const comments = await Comment.find({ post: id })
+            .populate({ path: 'author', model: User, select: 'username' })
+            .sort({ createdAt: -1 });
+        
         return NextResponse.json(comments);
     } catch (err: any) {
         return NextResponse.json({ message: err.message }, { status: 500 });
     }
 }
 
-// ✅ POST Handler: Fully dynamic with explicit any constraint for Next.js 15
-export async function POST(req: NextRequest, { params }: any) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
     try {
         await connectDB();
-        
-        const resolvedParams = await params;
-        const id = resolvedParams?.id; 
-
-        if (!id) {
-            return NextResponse.json({ message: 'Post ID missing' }, { status: 400 });
-        }
+        const { id } = await params;
 
         const authHeader = req.headers.get('authorization');
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return NextResponse.json({ message: 'Unauthorized: Missing Token' }, { status: 401 });
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as DecodedToken;
+        const userId = decoded.id;
 
-        const body = await req.json();
-        
-        if (!body.content || !body.content.trim()) {
-            return NextResponse.json({ message: 'Comment content cannot be empty' }, { status: 400 });
+        const { content } = await req.json();
+        if (!content || !content.trim()) {
+            return NextResponse.json({ message: 'Comment content empty' }, { status: 400 });
         }
 
-        const newComment = await Comment.create({
-            postId: id,
-            content: body.content,
-            author: {
-                id: decoded.id,
-                username: (decoded as any).username || 'Anonymous'
-            }
+        // Naya comment create kiya
+        let newComment = await Comment.create({
+            post: id,
+            author: userId,
+            content: content.trim()
         });
+
+        // 🚨 FIX: Naye bane comment ko bhi instantly populate kiya takki return object me name ho
+        newComment = await newComment.populate({ path: 'author', model: User, select: 'username' });
 
         return NextResponse.json(newComment, { status: 201 });
     } catch (err: any) {
