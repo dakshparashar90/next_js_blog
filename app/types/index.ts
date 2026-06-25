@@ -7,6 +7,9 @@ export interface IUser{
 }
 
 export interface IPost{
+    authorName: ReactNode;
+    views: number;
+    likes: any;
     _id:string;
     title:string;
     content:string;

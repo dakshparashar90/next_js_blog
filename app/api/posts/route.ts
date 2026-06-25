@@ -1,52 +1,41 @@
-import {NextRequest,NextResponse} from 'next/server'
-import {connectDB} from '@/app/lib/db'
-import mongoose from 'mongoose';
+import { NextRequest, NextResponse } from 'next/server';
+import { connectDB } from '@/app/lib/db';
+import Post from '@/models/Post'; // central model import kiya
 import jwt from 'jsonwebtoken';
-import {DecodedToken} from '@/app/types/index'
+import { DecodedToken } from '@/app/types';
 
-const PostSchema =new mongoose.Schema({
-    title:{type:String,required:true},
-    content:{type:String,required:true},
-    summary:{type:String,maxLength:300},
-    author:{type:String,required:true},
-    status:{type:String,defualt:'published',enum:['draft','published']}
-
-},{timestamps:true});
-
-const Post=mongoose.models.Post || mongoose.model('Post',PostSchema);
-
-export async function GET(req:Request){
-    try{
+export async function GET(req: NextRequest) {
+    try {
         await connectDB();
-        const {searchParams} = new URL(req.url);
-        const search=searchParams.get('search')||'';
-        let query:any={status:'published'};
-        
-        if(search){
-            query.title={$regex:search,$option:'i'};
-        }
+        const { searchParams } = new URL(req.url);
+        const search = searchParams.get('search') || '';
 
-        const posts=await Post.find(query).sort({createdAt:-1});
+        let query: any = { status: 'published' };
+        if (search) query.title = { $regex: search, $options: 'i' };
+
+        const posts = await Post.find(query).sort({ createdAt: -1 });
         return NextResponse.json({ posts });
-    }
-    catch(err:any){
-        return NextResponse.json({mess:err.message},{status:500});
+    } catch (err: any) {
+        return NextResponse.json({ message: err.message }, { status: 500 });
     }
 }
 
-export async function POST(req:NextRequest){
-    try{
+export async function POST(req: NextRequest) {
+    try {
         await connectDB();
-        const authHeader =req.headers.get('authorization');
-        if(!authHeader|| !authHeader.startsWith('Bearer')){
-            return NextResponse.json({message:'Unauthorized'},{status:401})
+        const authHeader = req.headers.get('authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
         const token = authHeader.split(' ')[1];
-        const decoded=jwt.verify(token,process.env.JWT_SECRET as string) as DecodedToken;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as DecodedToken;
+
         const body = await req.json();
         const post = await Post.create({ ...body, author: decoded.id });
-    }catch(err:any){
-            return NextResponse.json({ message: err.message }, { status: 400 });
+
+        return NextResponse.json(post, { status: 201 });
+    } catch (err: any) {
+        return NextResponse.json({ message: err.message }, { status: 400 });
     }
 }
