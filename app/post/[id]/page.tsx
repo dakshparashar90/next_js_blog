@@ -93,7 +93,7 @@ export default function PostDetail() {
             <h1>{post.title}</h1>
             
             <div style={{ display: 'flex', gap: '20px', color: '#666', fontSize: '14px', margin: '15px 0', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                <span>👤 Posted By User ID: <strong>{post.authorName || post.author}</strong></span>
+                <span>👤 Posted By User: <strong>{post.author?.username || 'Anonymous'}</strong></span>
                 <span>👁️ Views: {post.views}</span>
             </div>
 
